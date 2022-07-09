@@ -208,13 +208,12 @@ export const Content = () => {
               </div>
             </div>
           </div>}
-        {account &&
           <div>
             <h4>Account: {account}</h4>
             {loot !== undefined &&
               <p>{JSON.stringify(loot)}</p>}
-            <Character avatar={loot} />
-          </div>}
+            <Character avatar={loot} open={account && active} />
+          </div>
       </>
     </div>
   );

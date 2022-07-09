@@ -191,7 +191,7 @@ export default [
         },
         {
           "id": "hand-demons_hands",
-          "name": "Demons Hands",
+          "name": "Demon's Hands",
           "directory": "hand/Demons_Hands/demons_hands.glb",
           "thumbnail": "hand/Demons_Hands/demons_hands.jpg"
         },
