@@ -5,6 +5,10 @@ export const synthLootAbi = [{"inputs":[{"internalType":"address","name":"wallet
 export const lootAddress = "0xFF9C1b15B16263C61d017ee9F65C50e4AE0113D7";
 export const moreLootAddress = "0x1dfe7ca09e99d10835bf73044a23b73fc20623df";
 
+export const hyperLootAddress = "0x0290d49f53A8d186973B82faaFdaFe696B29AcBb";
+
+export const genesisAdventurerAddress = "0x8dB687aCEb92c66f013e1D614137238Cc698fEdb";
+
 export const lootAbi =[
     { inputs: [], stateMutability: "nonpayable", type: "constructor" },
     {

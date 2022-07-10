@@ -1,4 +1,4 @@
-import Character from "../components/Character";
+import World from "../components/World";
 import React, { useEffect, useState } from "react";
 
 import { Web3Provider } from "@ethersproject/providers";
@@ -7,9 +7,11 @@ import { useWeb3React } from "@web3-react/core";
 import { injected, walletconnect } from "../dapp/connectors";
 import { useEagerConnect, useInactiveListener } from "../dapp/hooks";
 
-import { synthLootAddress, synthLootAbi, lootAddress, moreLootAddress, lootAbi } from '../contract';
+import { synthLootAddress, synthLootAbi, lootAddress, moreLootAddress, hyperLootAddress, genesisAdventurerAddress, lootAbi } from '../contract';
 import { ethers } from "ethers";
 import dynamic from "next/dynamic";
+
+
 
 const Content = () => {
   const context = useWeb3React<Web3Provider>();
@@ -21,8 +23,10 @@ const Content = () => {
 
 
   const [syntheticLoot, setSyntheticLoot] = useState(null);
-  const [lootTokenIds, setLootTokenIds] = useState(null);
-  const [mLootTokenIds, setmLootTokenIds] = useState(null);
+  const [lootTokens, setLootTokens] = useState(null);
+  const [mLootTokens, setmLootTokens] = useState(null);
+  const [hyperLootTokens, setHyperLootTokens] = useState([]);
+  const [genesisAdventurer, setGenesisAdventurer] = useState([]);
 
   useEffect(() => {
     if (!account || !active) return;
@@ -68,24 +72,31 @@ const Content = () => {
       
       const mLoot = new ethers.Contract(moreLootAddress, lootAbi, signer);
 
+      const hyperLoot = new ethers.Contract(hyperLootAddress, lootAbi, signer);
+
+      const genesisAdventurerContract = new ethers.Contract(genesisAdventurerAddress, lootAbi, signer);
+
+
       const testAccount = '0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00';
 
       const lootAccount = account; // testAccount;
 
-      const [balance, mBalance] = await Promise.all([
+      const [balance, mBalance, hyperLootBalanceB, genesisAdventurerBalanceB] = await Promise.all([
         loot.balanceOf(lootAccount),
         mLoot.balanceOf(lootAccount),
+        hyperLoot.balanceOf(lootAccount),
+        genesisAdventurerContract.balanceOf(lootAccount)
       ]);
       
       // convert balance to from a BigNumber to a number
       const lootBalance = balance.toNumber();
       const mLootBalance = mBalance.toNumber();
+      const hyperLootBalance = hyperLootBalanceB.toNumber();
+      const genesisAdventurerBalance = genesisAdventurerBalanceB.toNumber();
 
       console.log('balance is', lootBalance);
       console.log('mBalance is', mLootBalance);
-
       const lootTokens = [];
-
       if(lootBalance > 0){
         console.log("This account has loot!");
         // iterate from 0 to lootBalance
@@ -95,9 +106,9 @@ const Content = () => {
           lootTokens.push(token);
           console.log('loot token is', token);
         }
+        // now traverse the scene and
       }
       const mLootTokens = [];
-
       // do the same for mLoot
       if(mLootBalance > 0){
         console.log("This account has mLoot!");
@@ -109,10 +120,35 @@ const Content = () => {
           console.log('mLoot token is', token);
         }
       }
+      const hyperLootTokens = [];
+      // do the same for mLoot
+      if(hyperLootBalance > 0){
+        console.log("This account has mLoot!");
+        // iterate from 0 to mLootBalance
+        // for i, call mLoot.tokenOfOwnerByIndex(lootAccount, i)
+        for (let i = 0; i < hyperLootBalance; i++) {
+          const token = await mLoot.tokenOfOwnerByIndex(lootAccount, i);
+          hyperLootTokens.push(token);
+          console.log('hyperLootTokens token is', token);
+        }
+      }
 
-      setLootTokenIds(lootTokens);
-      setmLootTokenIds(mLootTokens);
+      const genesisAdventurer = [];
+      if(genesisAdventurerBalance > 0){
+        console.log("This account has mLoot!");
+        // iterate from 0 to mLootBalance
+        // for i, call mLoot.tokenOfOwnerByIndex(lootAccount, i)
+        for (let i = 0; i < genesisAdventurerBalance; i++) {
+          const token = await mLoot.tokenOfOwnerByIndex(lootAccount, i);
+          genesisAdventurer.push(token);
+          console.log('genesisAdventurer token is', token);
+        }
+      }
 
+      setLootTokens(lootTokens);
+      setmLootTokens(mLootTokens);
+      setHyperLootTokens(mLootTokens);
+      setGenesisAdventurer(genesisAdventurer);
     })();
 
 
@@ -273,7 +309,7 @@ const Content = () => {
             <h4>Account: {account}</h4>
             {syntheticLoot !== undefined &&
               <p>{JSON.stringify(syntheticLoot)}</p>}
-            <Character avatar={syntheticLoot} lootTokens={lootTokenIds} mLootTokens={mLootTokenIds} open={account && active} />
+            <World avatar={syntheticLoot} hyperLootTokens={hyperLootTokens} genesisAdventurerTokens={genesisAdventurer} lootTokens={lootTokens} mLootTokens={mLootTokens} open={account && active} />
           </div>
       </>
     </div>
