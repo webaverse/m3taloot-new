@@ -115,7 +115,6 @@ export default function World({ avatar, open, lootTokens, mLootTokens, hyperLoot
   }
 
   useEffect(() => {
-    if(!lootTokens || !mLootTokens ||  !hyperLootTokens || !genesisAdventurerTokens) return;
     // load doors.glb using GLTFLoader
     const loader = new GLTFLoader();
     loader.load(
@@ -131,26 +130,27 @@ export default function World({ avatar, open, lootTokens, mLootTokens, hyperLoot
             console.log('found stand', object.name);
             // set the object's material to the token's color
             setStand(object);
-
-            // start an interval that checks if standRoot.current is null and cancels when it isn't
-            const interval = setInterval(() => {
-              if (standRoot.current) {
-                clearInterval(interval);
-                standRoot.current.position.copy(object.position);
-                standRoot.current.rotation.copy(object.rotation);
-                standRoot.current.updateMatrixWorld();
-              }
-            });
+              // start an interval that checks if standRoot.current is null and cancels when it isn't
+              const interval = setInterval(() => {
+                if (standRoot.current) {
+                  clearInterval(interval);
+                  standRoot.current.position.copy(object.position);
+                  standRoot.current.rotation.copy(object.rotation);
+                  standRoot.current.updateMatrixWorld();
+                }
+              });
           }
         });
+      }
+    );
+      }, [])
 
+  useEffect(() => {
+    if(!lootTokens || !mLootTokens ||  !hyperLootTokens || !genesisAdventurerTokens) return;
         setSlots(lootTokens, lootSlots);
         setSlots(mLootTokens, mLootSlots);
         setSlots(hyperLootTokens, hyperLootSlots);
         setSlots(genesisAdventurerTokens, genesisAdventurerSlots);
-      }
-    );
-        setSlots(mLootTokens, mLootSlots);
       }, [lootTokens, mLootTokens, hyperLootTokens, genesisAdventurerTokens])
 
   useEffect(() => {

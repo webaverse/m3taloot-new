@@ -13,6 +13,9 @@ import dynamic from "next/dynamic";
 
 
 
+
+
+
 const Content = () => {
   const context = useWeb3React<Web3Provider>();
   const { connector, library, account, activate, deactivate, active, error } = context;
@@ -177,7 +180,7 @@ const Content = () => {
     <div className="container min-h-screen mx-auto">
       <>
         {(!account || !active) &&
-          <div style={{ width: "50%", margin: "auto" }}>
+          <div style={{ width: "50%", margin: "auto", position: "fixed" }}>
             <div className="card bordered">
               <figure>
                 <img
