@@ -7,10 +7,11 @@ import { useWeb3React } from "@web3-react/core";
 import { injected, walletconnect } from "../dapp/connectors";
 import { useEagerConnect, useInactiveListener } from "../dapp/hooks";
 
-import { address, abi } from '../contract';
+import { synthLootAddress, synthLootAbi, lootAddress, moreLootAddress, lootAbi } from '../contract';
 import { ethers } from "ethers";
+import dynamic from "next/dynamic";
 
-export const Content = () => {
+const Content = () => {
   const context = useWeb3React<Web3Provider>();
   const { connector, library, account, activate, deactivate, active, error } = context;
 
@@ -19,26 +20,32 @@ export const Content = () => {
   }, []);
 
 
-  const [loot, setLoot] = useState(null);
+  const [syntheticLoot, setSyntheticLoot] = useState(null);
+  const [lootTokenIds, setLootTokenIds] = useState(null);
+  const [mLootTokenIds, setmLootTokenIds] = useState(null);
 
   useEffect(() => {
     if (!account || !active) return;
     const signer = library.getSigner();
 
-    const contract = new ethers.Contract(
-      address,
-      abi,
+    const synthContract = new ethers.Contract(
+      synthLootAddress,
+      synthLootAbi,
       signer
     );
     (async () => {
-      const chest = await contract.getChest(account);
-      const foot = await contract.getFoot(account);
-      const hand = await contract.getHand(account);
-      const head = await contract.getHead(account);
-      const neck = await contract.getNeck(account);
-      const waist = await contract.getWaist(account);
-      const ring = await contract.getRing(account);
-      const weapon = await contract.getWeapon(account);
+
+      const [chest, foot, hand, head, neck, ring, waist, weapon] =
+      await Promise.all([
+        synthContract.getChest(account),
+        synthContract.getFoot(account),
+        synthContract.getHand(account),
+        synthContract.getHead(account),
+        synthContract.getNeck(account),
+        synthContract.getRing(account),
+        synthContract.getWaist(account),
+        synthContract.getWeapon(account),
+      ]);
 
       const loot = {
         chest,
@@ -52,8 +59,62 @@ export const Content = () => {
       }
 
       console.log('loot is', loot);
-      setLoot(loot);
+      setSyntheticLoot(loot);
     })();
+
+    (async () => {
+      // get chests from loot and mLoot
+      const loot = new ethers.Contract(lootAddress, lootAbi, signer);
+      
+      const mLoot = new ethers.Contract(moreLootAddress, lootAbi, signer);
+
+      const testAccount = '0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00';
+
+      const lootAccount = account; // testAccount;
+
+      const [balance, mBalance] = await Promise.all([
+        loot.balanceOf(lootAccount),
+        mLoot.balanceOf(lootAccount),
+      ]);
+      
+      // convert balance to from a BigNumber to a number
+      const lootBalance = balance.toNumber();
+      const mLootBalance = mBalance.toNumber();
+
+      console.log('balance is', lootBalance);
+      console.log('mBalance is', mLootBalance);
+
+      const lootTokens = [];
+
+      if(lootBalance > 0){
+        console.log("This account has loot!");
+        // iterate from 0 to lootBalance
+        // for i, call loot.tokenOfOwnerByIndex(lootAccount, i)
+        for (let i = 0; i < lootBalance; i++) {
+          const token = await loot.tokenOfOwnerByIndex(lootAccount, i);
+          lootTokens.push(token);
+          console.log('loot token is', token);
+        }
+      }
+      const mLootTokens = [];
+
+      // do the same for mLoot
+      if(mLootBalance > 0){
+        console.log("This account has mLoot!");
+        // iterate from 0 to mLootBalance
+        // for i, call mLoot.tokenOfOwnerByIndex(lootAccount, i)
+        for (let i = 0; i < mLootBalance; i++) {
+          const token = await mLoot.tokenOfOwnerByIndex(lootAccount, i);
+          mLootTokens.push(token);
+          console.log('mLoot token is', token);
+        }
+      }
+
+      setLootTokenIds(lootTokens);
+      setmLootTokenIds(mLootTokens);
+
+    })();
+
 
   }, [account, active]);
 
@@ -210,11 +271,15 @@ export const Content = () => {
           </div>}
           <div>
             <h4>Account: {account}</h4>
-            {loot !== undefined &&
-              <p>{JSON.stringify(loot)}</p>}
-            <Character avatar={loot} open={account && active} />
+            {syntheticLoot !== undefined &&
+              <p>{JSON.stringify(syntheticLoot)}</p>}
+            <Character avatar={syntheticLoot} lootTokens={lootTokenIds} mLootTokens={mLootTokenIds} open={account && active} />
           </div>
       </>
     </div>
   );
 };
+
+export default dynamic(() => Promise.resolve(Content), {
+  ssr: false,
+});
