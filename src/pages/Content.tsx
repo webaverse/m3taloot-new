@@ -19,7 +19,9 @@ import dynamic from "next/dynamic";
 const Content = () => {
   const context = useWeb3React<Web3Provider>();
   const { connector, library, account, activate, deactivate, active, error } = context;
-
+  useEffect(()=>{
+    import("bootstrap/dist/js/bootstrap");
+  },[]);
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", "dark");
   }, []);
@@ -175,7 +177,7 @@ const Content = () => {
   const connected = (connection: typeof injected | typeof walletconnect) => connection === connector;
   const disabled = !triedEager || !!activatingConnector || connected(injected) || connected(walletconnect) || !!error;
   
-
+  console.log(account, "account", active, "active");
   return (
     <div className="container min-h-screen mx-auto">
       <>
@@ -185,6 +187,7 @@ const Content = () => {
               <figure>
                 <img
                   className="h-24"
+                  style={{height:"24px"}}
                   src="https://images.ctfassets.net/9sy2a0egs6zh/4zJfzJbG3kTDSk5Wo4RJI1/1b363263141cf629b28155e2625b56c9/mm-logo.svg"
                   alt="metamask" />
               </figure>
@@ -239,6 +242,7 @@ const Content = () => {
               <figure>
                 <img
                   className="h-24"
+                  style={{height:"24px"}}
                   src="https://docs.walletconnect.com/img/walletconnect-logo.svg"
                   alt="wallet connect" />
               </figure>
@@ -308,10 +312,10 @@ const Content = () => {
               </div>
             </div>
           </div>}
-          <div>
+          <div style={{color:"white"}}>
             <h4>Account: {account}</h4>
-            {syntheticLoot !== undefined &&
-              <p>{JSON.stringify(syntheticLoot)}</p>}
+            {/*{syntheticLoot !== undefined &&
+              <p>{JSON.stringify(syntheticLoot)}</p>}*/}
             <World avatar={syntheticLoot} hyperLootTokens={hyperLootTokens} genesisAdventurerTokens={genesisAdventurer} lootTokens={lootTokens} mLootTokens={mLootTokens} open={account && active} />
           </div>
       </>
