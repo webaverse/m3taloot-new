@@ -1,6 +1,7 @@
 {
   "name": "metaloot-site",
   "version": "0.0.1",
+  "type": "module",
   "scripts": {
     "build": "next build",
     "dev": "next dev",
@@ -15,10 +16,10 @@
     "*.{js,css,md}": "prettier --write",
     "package.json": "sort-package-json"
   },
-  "type": "module",
   "dependencies": {
     "@ethersproject/providers": "5.6.8",
     "@ethersproject/units": "5.6.1",
+    "@popperjs/core": "^2.11.6",
     "@react-three/drei": "^9.17.0",
     "@react-three/fiber": "^8.0.27",
     "@tailwindcss/typography": "0.5.3",
