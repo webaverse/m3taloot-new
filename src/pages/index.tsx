@@ -1,16 +1,7 @@
-import { Web3ReactProvider } from "@web3-react/core";
-import React, { useEffect } from "react";
-
-import { Web3Provider } from "@ethersproject/providers";
+import React, { useState, useEffect, createContext } from "react";
 import Content from "./Content";
-import { POLLING_INTERVAL } from "../dapp/connectors";
 
-
-export function getLibrary(provider: any): Web3Provider {
-  const library = new Web3Provider(provider);
-  library.pollingInterval = POLLING_INTERVAL;
-  return library;
-}
+export const AppContext = createContext<any>({});
 
 const App = function () {
   useEffect(() => {
@@ -24,12 +15,28 @@ const App = function () {
     document.querySelector("body").style.margin = bodyClass.margin;
     document.querySelector("body").style.padding = bodyClass.padding;
   })
+
+  const [ state, setState ] = useState([])
+  const [ account, setAccount ] = useState(null)
+  const [ library, setLibrary ] = useState(null)
+  const [ provider, setProvider ] = useState(null)
+
+
+  const AppContextValues = {
+    state,
+    setState,
+    account,
+    setAccount,
+    library,
+    setLibrary,
+    provider,
+    setProvider,
+  };
+
   return (
-    <>
-      <Web3ReactProvider getLibrary={getLibrary}>
+    <AppContext.Provider value={AppContextValues}>
         <Content />
-      </Web3ReactProvider>
-    </>
+    </AppContext.Provider>
   );
 };
 

@@ -1,0 +1,91 @@
+.walletModal {
+  background-color: black;
+  border-radius: 5px;
+  position: absolute;
+  float: left;
+  width: 600px;
+  height: 300px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.headerTitle {
+  font-size: 25px;
+  font-weight: 700;
+  color: white;
+  margin: 40px;
+  line-height: 39px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.bodyTitle {
+  color: white;
+  letter-spacing: 1px;
+  font-size: 17px;
+  margin: 30px;
+}
+
+.connectBtn {
+  display: flex;
+  margin: auto;
+  justify-content: center;
+  background-image: url("../../public/images/connectWalletBtn.png");
+  background-size: 100% 100%;
+  width: 350px;
+  height: 80px;
+  margin-top: 50px;
+  cursor: pointer;
+}
+
+.connectTitle {
+  text-transform: uppercase;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 25px;
+  margin-top: 25px;
+  vertical-align: middle;
+  color: #ffff00;
+  letter-spacing: 1px;
+}
+
+.connectBtn:hover .connectTitle {
+  color: red;
+}
+
+.walletAddressSection {
+  background-color: black;
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+  position: absolute;
+  right: 0px;
+  top: 20px;
+  width: 200px;
+  height: 45px;
+  display: flex;
+  justify-content: center;
+}
+
+.walletAddress {
+  color: #ffff00;
+  line-height: 45px;
+  text-align: center;
+  padding: 0px 5px 0px 15px;
+  vertical-align: middle;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.disconnectBtn {
+  margin: 10px 0px 10px 15px;
+  background-image: url("../../public/images/disconnectWalletBtn.png");
+  width: 25px;
+  background-size: 100% 100%;
+  cursor: pointer;
+}
+
+.disconnectBtn:hover {
+  background-image: url("../../public/images/disconnectWalletHoverBtn.png");
+}

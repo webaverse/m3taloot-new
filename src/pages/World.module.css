@@ -1,0 +1,120 @@
+.avatarModal {
+  background-color: black;
+  border-radius: 5px;
+  position: absolute;
+  float: left;
+  width: 700px;
+  height: 500px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.closeBtn {
+  position: absolute;
+  float: right;
+  right: 30px;
+  top: 5px;
+  font-size: 25px;
+  cursor: pointer;
+}
+.closeBtn:hover {
+  color: #ffff00;
+}
+
+.bodySection {
+  display: flex;
+  justify-content: center;
+  height: 57%;
+}
+
+.headerTitle {
+  font-size: 25px;
+  font-weight: 700;
+  color: white;
+  margin: 40px;
+  line-height: 39px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.bodyTitle {
+  color: white;
+  letter-spacing: 1px;
+  font-size: 17px;
+  width: 40%;
+  text-align: left;
+}
+
+.traitName {
+  margin: 0px;
+  padding: 0px;
+}
+
+.avatarSection {
+  width: 40%;
+}
+
+.btnSection {
+  margin-top: 5px;
+  display: flex;
+  justify-content: space-evenly;
+}
+
+.claimBtn {
+  background-image: url("../../public/images/connectWalletBtn.png");
+  background-size: 100% 100%;
+  width: 200px;
+  height: 50px;
+  cursor: pointer;
+}
+
+.claimTitle {
+  text-transform: uppercase;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 30px;
+  margin-top: 10px;
+  vertical-align: middle;
+  color: #ffff00;
+  letter-spacing: 2px;
+}
+
+.claimBtn:hover .claimTitle {
+  color: red;
+}
+
+.downloadBtn {
+  display: flex;
+  justify-content: center;
+  background-image: url("../../public/images/connectWalletBtn.png");
+  background-size: 100% 100%;
+  width: 200px;
+  height: 50px;
+  cursor: pointer;
+}
+
+.downloadTitle {
+  text-transform: uppercase;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 30px;
+  margin-top: 10px;
+  vertical-align: middle;
+  color: #ffff00;
+  letter-spacing: 1px;
+}
+
+.downloadBtn:hover .downloadTitle {
+  color: red;
+}
+
+.mintCanvas {
+  width: 200px;
+  height: 400px;
+  background-color: #40455A;
+  border: 1px solid #303949;
+  backdrop-filter: blur(22.5px);
+  border-radius: 5px;
+}

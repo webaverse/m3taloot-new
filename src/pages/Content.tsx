@@ -1,24 +1,17 @@
-import World from "../components/World";
-import React, { useEffect, useState } from "react";
-
-import { Web3Provider } from "@ethersproject/providers";
-import { useWeb3React } from "@web3-react/core";
-
-import { injected, walletconnect } from "../dapp/connectors";
-import { useEagerConnect, useInactiveListener } from "../dapp/hooks";
-
-import { synthLootAddress, synthLootAbi, lootAddress, moreLootAddress, hyperLootAddress, genesisAdventurerAddress, lootAbi } from '../contract';
+import React, { useEffect, useState, useContext } from "react";
+import WalletConnectProvider from "@walletconnect/web3-provider";
 import { ethers } from "ethers";
 import dynamic from "next/dynamic";
+import Web3Modal from "web3modal";
 
+import { synthLootAddress, synthLootAbi, lootAddress, moreLootAddress, hyperLootAddress, genesisAdventurerAddress, lootAbi } from '../contract';
+import styles from './Content.module.css';
+import World from "./World";
+import { AppContext } from "./index";
 
-
-
-
+const INFURA_ID = "460f40a260564ac4a4f4b3fffb032dad";
 
 const Content = () => {
-  const context = useWeb3React<Web3Provider>();
-  const { connector, library, account, activate, deactivate, active, error } = context;
   useEffect(()=>{
     import("bootstrap/dist/js/bootstrap");
   },[]);
@@ -26,15 +19,16 @@ const Content = () => {
     document.documentElement.setAttribute("data-theme", "dark");
   }, []);
 
-
   const [syntheticLoot, setSyntheticLoot] = useState(null);
   const [lootTokens, setLootTokens] = useState(null);
   const [mLootTokens, setmLootTokens] = useState(null);
   const [hyperLootTokens, setHyperLootTokens] = useState([]);
   const [genesisAdventurer, setGenesisAdventurer] = useState([]);
 
+  const { state, account, setAccount, library, setLibrary, provider, setProvider} = useContext(AppContext);
+
   useEffect(() => {
-    if (!account || !active) return;
+    if (!account) return;
     const signer = library.getSigner();
 
     const synthContract = new ethers.Contract(
@@ -157,169 +151,87 @@ const Content = () => {
     })();
 
 
-  }, [account, active]);
+  }, [account]);
 
-  // handle logic to recognize the connector currently being activated
-  const [activatingConnector, setActivatingConnector] = useState<any>();
-  useEffect(() => {
-    if (activatingConnector && activatingConnector === connector) {
-      setActivatingConnector(undefined);
-    }
-  }, [activatingConnector, connector]);
+  // // handle logic to recognize the connector currently being activated
+  // const [activatingConnector, setActivatingConnector] = useState<any>();
+  // useEffect(() => {
+  //   if (activatingConnector && activatingConnector === connector) {
+  //     setActivatingConnector(undefined);
+  //   }
+  // }, [activatingConnector, connector]);
 
   // handle logic to eagerly connect to the injected ethereum provider, if it exists and has granted access already
-  const triedEager = useEagerConnect();
+  // const triedEager = useEagerConnect();
 
-  // handle logic to connect in reaction to certain events on the injected ethereum provider, if it exists
-  useInactiveListener(!triedEager || !!activatingConnector);
+  // // handle logic to connect in reaction to certain events on the injected ethereum provider, if it exists
+  // useInactiveListener(!triedEager || !!activatingConnector);
 
-  const activating = (connection: typeof injected | typeof walletconnect) => connection === activatingConnector;
-  const connected = (connection: typeof injected | typeof walletconnect) => connection === connector;
-  const disabled = !triedEager || !!activatingConnector || connected(injected) || connected(walletconnect) || !!error;
+  // const activating = (connection: typeof injected | typeof walletconnect) => connection === activatingConnector;
+  // const connected = (connection: typeof injected | typeof walletconnect) => connection === connector;
+  // const disabled = !triedEager || !!activatingConnector || connected(injected) || connected(walletconnect) || !!error;
+
+  const web3Modal = new Web3Modal({
+    network: "rinkeby",
+    theme: "light", // optional, 'dark' / 'light',
+    cacheProvider: false, // optional
+    providerOptions: {
+      walletconnect: {
+        package: WalletConnectProvider, // required
+        options: {
+          infuraId: INFURA_ID, // required
+        },
+      }
+    }, // required
+  });
+
+  const connectWallet = async () => {
+    try {
+      const web3Provider = await web3Modal.connect();
+      const library = new ethers.providers.Web3Provider(web3Provider);
+      const web3Accounts = await library.listAccounts();
+      const network = await library.getNetwork();
+      setAccount(web3Accounts[0]);
+      setProvider(web3Provider);
+      setLibrary(library)
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  const disConnectWallet = async () => {
+    console.log("disconnect")
+    await web3Modal.clearCachedProvider();
+    if (provider?.disconnect && typeof provider.disconnect === 'function') {
+        await provider.disconnect();
+        setAccount(null);
+        setProvider(null);
+        setLibrary(null);
+    }
+  }
   
-  console.log(account, "account", active, "active");
+  // console.log(account, "account", active, "active");
   return (
-    <div className="container min-h-screen mx-auto">
       <>
-        {(!account || !active) &&
-          <div style={{ width: "50%", margin: "auto", position: "fixed" }}>
-            <div className="card bordered">
-              <figure>
-                <img
-                  className="h-24"
-                  style={{height:"24px"}}
-                  src="https://images.ctfassets.net/9sy2a0egs6zh/4zJfzJbG3kTDSk5Wo4RJI1/1b363263141cf629b28155e2625b56c9/mm-logo.svg"
-                  alt="metamask" />
-              </figure>
-              <div className="card-body">
-                <h2 className="card-title">
-                  <a className="link link-hover" href="https://metamask.io/" target="_blank" rel="noreferrer">
-                    MetaMask
-                  </a>
-                </h2>
-                <p>A crypto wallet & gateway to blockchain apps</p>
-                <div className="justify-end card-actions">
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    disabled={disabled}
-                    onClick={() => {
-                      setActivatingConnector(injected);
-                      console.log("injected", injected);
-                      activate(injected);
-                    }}
-                  >
-                    <div className="px-2 py-4">
-                      {activating(injected) && <p className="btn loading">loading...</p>}
-                      {connected(injected) && (
-                        <span role="img" aria-label="check">
-                          ✅
-                        </span>
-                      )}
-                    </div>
-                    Connect with MetaMask
-                  </button>
-                  {(active || error) && connected(injected) && (
-                    <>
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        onClick={() => {
-                          if (connected(walletconnect)) {
-                            (connector as any).close();
-                          }
-                          deactivate();
-                        }}
-                      >
-                        Deactivate
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
+        { !account && <div className={styles.walletModal}>
+            <p className={styles.headerTitle}>Enter, Brave adventurers</p>
+            <p className={styles.bodyTitle}>You will need to connect your wallet for this experience.</p>
+            <div className={styles.connectBtn} >
+              <p className={styles.connectTitle} onClick={connectWallet}>Connect wallet</p>
             </div>
-            <div className="card bordered">
-              <figure>
-                <img
-                  className="h-24"
-                  style={{height:"24px"}}
-                  src="https://docs.walletconnect.com/img/walletconnect-logo.svg"
-                  alt="wallet connect" />
-              </figure>
-              <div className="card-body">
-                <h2 className="card-title">
-                  <a className="link link-hover" href="https://walletconnect.org/" target="_blank" rel="noreferrer">
-                    Wallet Connect
-                  </a>
-                </h2>
-                <p>Open protocol for connecting Wallets to Dapps</p>
-                <div className="justify-end card-actions">
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    disabled={disabled}
-                    onClick={() => {
-                      setActivatingConnector(walletconnect);
-                      activate(walletconnect);
-                    }}
-                  >
-                    <div className="px-2 py-4">
-                      {activating(walletconnect) && <p className="btn loading">loading...</p>}
-                      {connected(walletconnect) && (
-                        <span role="img" aria-label="check">
-                          ✅
-                        </span>
-                      )}
-                    </div>
-                    Connect with WalletConnect
-                  </button>
-                  {(active || error) && connected(walletconnect) && (
-                    <>
-                      {!!(library && account) && (
-                        <button
-                          type="button"
-                          className="btn btn-primary"
-                          onClick={() => {
-                            library
-                              .getSigner(account)
-                              .signMessage("👋")
-                              .then((signature: any) => {
-                                window.alert(`Success!\n\n${signature}`);
-                              })
-                              .catch((err: Error) => {
-                                window.alert(`Failure!${err && err.message ? `\n\n${err.message}` : ""}`);
-                              });
-                          }}
-                        >
-                          Sign Message
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        onClick={() => {
-                          if (connected(walletconnect)) {
-                            (connector as any).close();
-                          }
-                          deactivate();
-                        }}
-                      >
-                        Deactivate
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>}
-          <div style={{color:"white"}}>
-            <h4>Account: {account}</h4>
-            {/*{syntheticLoot !== undefined &&
-              <p>{JSON.stringify(syntheticLoot)}</p>}*/}
-            <World avatar={syntheticLoot} hyperLootTokens={hyperLootTokens} genesisAdventurerTokens={genesisAdventurer} lootTokens={lootTokens} mLootTokens={mLootTokens} open={account && active} />
           </div>
+        }
+        { account && <div className={styles.walletAddressSection}>
+            <p className={styles.walletAddress}>{account.slice(0, 4) + `...` + account.slice(-5)}</p>
+            <div className={styles.disconnectBtn} onClick={disConnectWallet}></div>
+          </div>
+        }
+        <div style={{color:"white"}}>
+          {/*{syntheticLoot !== undefined &&
+            <p>{JSON.stringify(syntheticLoot)}</p>}*/}
+          <World avatar={syntheticLoot} hyperLootTokens={hyperLootTokens} genesisAdventurerTokens={genesisAdventurer} lootTokens={lootTokens} mLootTokens={mLootTokens} open={account} />
+        </div>
       </>
-    </div>
   );
 };
 
