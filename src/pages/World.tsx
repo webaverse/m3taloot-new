@@ -255,17 +255,16 @@ export default function World({ avatar, open, lootTokens, mLootTokens, hyperLoot
                   color={[1,1,1]}
                   intensity={0.5}
                 />
-                <directionalLight 
-                  //castShadow = {true}
-                  intensity = {0.5} 
-                  //color = {[0.5,0.5,0.5]}
-                  position = {[3, 1, 5]} 
-                  shadow-mapSize = {[1024, 1024]}>
-                </directionalLight>
-                  <mesh>
-                      {/* add a group to the react-three/fiber scene */}
-                      {/* <primitive object={model.clone()} /> */}
-                  </mesh>
+              {/* create a cube and add it to the scene */}
+              <mesh
+
+                position={[0, 0.02, 0]}
+                onClick={showAvatarModal}
+              >
+                {/* if scene is not null, show it */}
+                {scene.current && <primitive object={(standRoot as any).current?.clone() ?? null} />}
+              </mesh>
+                
               </Canvas>
             </div>
           </div>
