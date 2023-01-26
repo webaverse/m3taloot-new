@@ -29,11 +29,27 @@
   height: 57%;
 }
 
+.successBodySection {
+  display: flex;
+  justify-content: center;
+  height: 47%;
+}
+
 .headerTitle {
   font-size: 25px;
   font-weight: 700;
   color: white;
   margin: 40px;
+  line-height: 39px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.successHeaderTitle {
+  font-size: 25px;
+  font-weight: 700;
+  color: white;
+  margin: 40px 40px 10px 40px;
   line-height: 39px;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -47,6 +63,15 @@
   text-align: left;
 }
 
+.successBodyTitle {
+  font-size: 22px;
+  font-weight: 700;
+  color: white;
+  margin: 10px;
+  line-height: 39px;
+  letter-spacing: 1px;
+}
+
 .traitName {
   margin: 0px;
   padding: 0px;
@@ -54,12 +79,24 @@
 
 .avatarSection {
   width: 40%;
+  padding-left: 15px;
+}
+
+.successAvatarSection {
+  width: 30%;
+  padding-left: 15px;
 }
 
 .btnSection {
-  margin-top: 5px;
+  margin-top: 15px;
   display: flex;
   justify-content: space-evenly;
+}
+
+.successBtnSection {
+  margin-top: 5px;
+  display: flex;
+  justify-content: center;
 }
 
 .claimBtn {
@@ -68,6 +105,15 @@
   width: 200px;
   height: 50px;
   cursor: pointer;
+}
+
+.disabledClaimBtn {
+  background-image: url("../../public/images/connectWalletBtn.png");
+  background-size: 100% 100%;
+  width: 200px;
+  height: 50px;
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .claimTitle {
@@ -83,6 +129,24 @@
 
 .claimBtn:hover .claimTitle {
   color: red;
+}
+
+.discordBtn {
+  background-image: url("../../public/images/discord.png");
+  background-size: 100% 100%;
+  width: 60px;
+  height: 45px;
+  cursor: pointer;
+  margin: 0 20px;
+}
+
+.twitterBtn {
+  background-image: url("../../public/images/twitter.png");
+  background-size: 100% 100%;
+  width: 60px;
+  height: 45px;
+  cursor: pointer;
+  margin: 0 20px;
 }
 
 .downloadBtn {
@@ -111,8 +175,17 @@
 }
 
 .mintCanvas {
-  width: 200px;
-  height: 400px;
+  width: 700px;
+  height: 700px;
+  background-color: #40455A;
+  border: 1px solid #303949;
+  backdrop-filter: blur(22.5px);
+  border-radius: 5px;
+}
+
+.successCanvas {
+  width: 600px;
+  height: 600px;
   background-color: #40455A;
   border: 1px solid #303949;
   backdrop-filter: blur(22.5px);

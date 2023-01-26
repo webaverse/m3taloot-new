@@ -1,7 +1,12 @@
+import { PerspectiveCamera, PositionalAudio } from '@react-three/drei';
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import React, { Suspense, useEffect, useRef, useState } from "react";
-import { AnimationMixer } from "three";
+import axios from "axios";
+import { BigNumber, ethers } from "ethers";
+import React, { Suspense, useEffect, useRef, useState, useContext } from "react";
+import { AnimationMixer, Color } from "three";
+import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 
 
@@ -9,8 +14,17 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { sceneService } from "../components/scene";
 import templates from "../data/base_models";
 import modelTraits from "../data/model_traits";
+import VRMExporter from "../library/VRMExporter";
+import { combine } from "../library/merge-geometry";
+import { getAvatarData } from "../library/utils";
+import { getModelFromScene, getScreenShot } from "../library/utils";
 import styles from "./World.module.css";
+import { AppContext } from "./index";
+import Avatar from '../components/Avatar';
 
+
+const pinataApiKey = process.env.VITE_PINATA_API_KEY;
+const pinataSecretApiKey = process.env.VITE_PINATA_API_SECRET;
 
 function CameraMod(scene) {
   const cameraDolly = scene.scene.cameras[0];
@@ -39,14 +53,23 @@ const genesisAdventurerSlots = [
 export default function World({ avatar, open, lootTokens, mLootTokens, hyperLootTokens, genesisAdventurerTokens }) {
   const scene = useRef();
   const standRoot = useRef();
-  const standRootCopy = useRef();
+  // const avatarCamera = useRef();
+  // const standRootCopy = useRef();
   const [doors, setDoors] = useState<any>();
   const [stand, setStand] = useState<any>();
   const [avatarModal, setAvatarModal] = useState<any>(false);
+  const [successModal, setSuccessModal] = useState<any>(false);
+  const [claimDisable, setClaimDisable] = useState<any>(false);
+  const { state, account, setAccount, library, setLibrary, provider, setProvider } = useContext(AppContext);
+
+  let camera = new THREE.PerspectiveCamera();
+  let [x, y, z] = [-3, -1, 0];
+  camera.position.set(x, y, z);
 
   const templateInfo = templates[0];
 
   function fetchTrait(type: any, name: any) {
+    console.log("name", type, name)
     // Sometimes the name can have a prefix with double-quotes like "Cataclysm Hero", we want to remove the prefix (including double-quotes) and the space after it
     let cleanedName = name.replace(/^"(.+)"\s/, "");
     // remove any +1 or +2 in the string
@@ -59,7 +82,8 @@ export default function World({ avatar, open, lootTokens, mLootTokens, hyperLoot
 
     // find the trait inside the collection array inside modelTraits
     const category = modelTraits.filter((trait: any) => trait.trait === type)[0];
-    const trait = category.collection.filter((trait: any) => trait.name === cleanedName)[0];
+    const trait = category.collection.filter((trait: any) => trait.name === cleanedName)[0];  // fixed this
+    // const trait = category.collection[0];
 
     if (trait) return trait;
 
@@ -88,6 +112,26 @@ export default function World({ avatar, open, lootTokens, mLootTokens, hyperLoot
 
       return trait;
     }
+  }
+
+  async function saveFileToPinata(fileData, fileName) {
+    console.log("pinataApiKey", pinataApiKey);
+    console.log("pinataSecretApiKey", pinataSecretApiKey);
+    if (!fileData) return console.warn("Error saving to pinata: No file data");
+    const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
+    let data = new FormData();
+
+    data.append("file", fileData, fileName);
+    let resultOfUpload = await axios.post(url, data, {
+      maxContentLength: "Infinity", //this is needed to prevent axios from erroring out with large files
+      maxBodyLength: "Infinity", //this is needed to prevent axios from erroring out with large files
+      headers: {
+        "Content-Type": `multipart/form-data; boundary=${data._boundary}`,
+        pinata_api_key: pinataApiKey,
+        pinata_secret_api_key: pinataSecretApiKey,
+      },
+    });
+    return resultOfUpload.data;
   }
 
   function setSlots(tokens, tokenSlots) {
@@ -195,11 +239,14 @@ export default function World({ avatar, open, lootTokens, mLootTokens, hyperLoot
                 gltf.scene.position.set(-0.5, 1, 0.1);
               }
               (standRoot as any).current.add(gltf.scene);
+              console.log("standRoot", standRoot)
             });
         } else {
           console.log("trait ignored", key);
         }
       }
+
+
     }
   }, [avatar]);
 
@@ -218,7 +265,166 @@ export default function World({ avatar, open, lootTokens, mLootTokens, hyperLoot
 
   const closeAvatarModal = () => {
     setAvatarModal(false);
+    setSuccessModal(false);
   };
+
+  const claimNFT = async () => {
+    setSuccessModal(true);
+    setClaimDisable(true);
+    // const screenshot = await getScreenShot("mint-scene")
+    // if (!screenshot) {
+    //   throw new Error("Unable to get screenshot")
+    // }
+
+    // const imageHash = await saveFileToPinata(
+    //   screenshot,
+    //   "AvatarImage_" + Date.now() + ".png",
+    // ).catch((reason) => {
+    //   console.error(reason)
+    //   // setMintStatus("Couldn't save to pinata")
+    // })
+    // const glb = await getModelFromScene(avatar.scene.clone(), "glb", new Color(1, 1, 1))
+    // const glbHash = await saveFileToPinata(
+    //   glb,
+    //   "AvatarGlb_" + Date.now() + ".glb",
+    // )
+
+    // let attributes = [];
+    // Object.keys(avatar).map((trait: any) => {
+    //   attributes.push({
+    //     trait_type: trait,
+    //     value: avatar[trait]
+    //   })
+    // })
+    // console.log("attributes", attributes)
+    // const metadata = {
+    //   name: "Avatars",
+    //   description: "Creator Studio Avatars.",
+    //   image: `ipfs://${imageHash.IpfsHash}`,
+    //   animation_url: `ipfs://${glbHash.IpfsHash}`,
+    //   attributes,
+    // }
+    // const str = JSON.stringify(metadata)
+    // const metaDataHash = await saveFileToPinata(
+    //   new Blob([str]),
+    //   "AvatarMetadata_" + Date.now() + ".json",
+    // )
+    // const metadataIpfs = metaDataHash.IpfsHash
+
+    // ////////////////////// mint /////////////////////
+    // const chainId = 5 // 1: ethereum mainnet, 4: rinkeby 137: polygon mainnet 5: // Goerli testnet
+    // if (window.ethereum.networkVersion !== chainId) {
+    //   try {
+    //     await window.ethereum.request({
+    //       method: "wallet_switchEthereumChain",
+    //       params: [{ chainId: "0x5" }], // 0x4 is rinkeby. Ox1 is ethereum mainnet. 0x89 polygon mainnet  0x5: // Goerli testnet
+    //     })
+    //   } catch (err) {
+    //     // notifymessage("Please check the Ethereum mainnet", "error");
+    //     // setMintStatus("Please check the Polygon mainnet")
+    //     return false
+    //   }
+    // }
+    // const signer = new ethers.providers.Web3Provider(
+    //   window.ethereum,
+    // ).getSigner()
+    // const contract = new ethers.Contract(CharacterContract.address, CharacterContract.abi, signer)
+    // const tokenPrice = await contract.tokenPrice()
+    // try {
+    //   const options = {
+    //     value: BigNumber.from(tokenPrice).mul(1),
+    //     from: account,
+    //   }
+    //   const tx = await contract.mintToken(1, metadataIpfs, options)
+    //   let res = await tx.wait()
+    //   if (res.transactionHash) {
+    //     // setMintStatus("Mint success!")
+    //     // setCurrentView(ViewStates.MINT_COMPLETE)
+    //   }
+    // } catch (err) {
+    //   // setMintStatus("Public Mint failed! Please check your wallet.")
+    // }
+    /////////////////////////////////////////////////
+  }
+
+  const download = async (avatarToDownload, fileName, format, atlasSize = 4096) => {
+    // We can use the SaveAs() from file-saver, but as I reviewed a few solutions for saving files,
+    // this approach is more cross browser/version tested then the other solutions and doesn't require a plugin.
+    const link = document.createElement("a")
+    link.style.display = "none"
+    document.body.appendChild(link)
+    function save(blob, filename) {
+      link.href = URL.createObjectURL(blob)
+      link.download = filename
+      link.click()
+    }
+
+    function saveString(text, filename) {
+      save(new Blob([text], { type: "text/plain" }), filename)
+    }
+
+    function saveArrayBuffer(buffer, filename) {
+      save(getArrayBuffer(buffer), filename)
+    }
+    // Specifying the name of the downloadable model
+    const downloadFileName = `${
+      fileName && fileName !== "" ? fileName : "AvatarCreatorModel"
+    }`
+
+    console.log('avatarToDownload', avatarToDownload)
+
+    const avatarToCombine = avatarToDownload.clone()
+
+    const exporter = format === "glb" ? new GLTFExporter() : new VRMExporter()
+    const avatarModel = await combine({
+      transparentColor: new Color(1, 1, 1),
+      avatar: avatarToCombine,
+      atlasSize,
+    })
+    if (format === "glb") {
+      exporter.parse(
+        avatarModel,
+        (result) => {
+          if (result instanceof ArrayBuffer) {
+            saveArrayBuffer(result, `${downloadFileName}.glb`)
+          } else {
+            const output = JSON.stringify(result, null, 2)
+            saveString(output, `${downloadFileName}.gltf`)
+          }
+        },
+        (error) => {
+          console.error("Error parsing", error)
+        },
+        {
+          trs: false,
+          onlyVisible: false,
+          truncateDrawRange: true,
+          binary: true,
+          forcePowerOfTwoTextures: false,
+          maxTextureSize: 1024 || Infinity,
+        },
+      )
+    } else {
+
+      const vrmData = {...getVRMBaseData(avatar), ...getAvatarData(avatarModel, "UpstreetAvatar")}
+      exporter.parse(vrmData, avatarModel, (vrm) => {
+        saveArrayBuffer(vrm, `${downloadFileName}.vrm`)
+      })
+    }
+  };
+
+  function getVRMBaseData(avatar) {
+    // to do, merge data from all vrms, not to get only the first one
+    for (const prop in avatar) {
+      if (avatar[prop].vrm) {
+        return avatar[prop].vrm;
+      }
+    }
+  }
+
+  function getArrayBuffer(buffer) {
+    return new Blob([buffer], { type: "application/octet-stream" });
+  }
 
   return (
     <Suspense fallback="loading...">
@@ -238,49 +444,103 @@ export default function World({ avatar, open, lootTokens, mLootTokens, hyperLoot
           <p className={styles.closeBtn} onClick={closeAvatarModal}>
             x
           </p>
-          <p className={styles.headerTitle}>Your loot</p>
-          <div className={styles.bodySection}>
-            <div className={styles.bodyTitle}>
-              {Object.keys(avatar).map((trait: any) => {
-                return (
-                  <p className={styles.traitName} key={trait}>
-                    {trait}: &nbsp;&nbsp;{avatar[trait]}
-                  </p>
-                );
-              })}
-            </div>
-            <div className={styles.avatarSection}>
-              <Canvas className={styles.mintCanvas} id="editor-scene" gl={{ antialias: true, preserveDrawingBuffer:true }} linear={false}>
-                <ambientLight
-                  color={[1,1,1]}
-                  intensity={0.5}
-                />
-                <directionalLight 
-                  //castShadow = {true}
-                  intensity = {0.5} 
-                  //color = {[0.5,0.5,0.5]}
-                  position = {[3, 1, 5]} 
-                  shadow-mapSize = {[1024, 1024]}>
-                </directionalLight>
-                  <mesh>
-                      {/* add a group to the react-three/fiber scene */}
-                      {/* <primitive object={model.clone()} /> */}
-                  </mesh>
-              </Canvas>
-            </div>
-          </div>
-          <div className={styles.btnSection}>
-            <div className={styles.claimBtn}>
-              <p className={styles.claimTitle} onClick={() => {}}>
-                Claim
-              </p>
-            </div>
-            <div className={styles.downloadBtn}>
-              <p className={styles.downloadTitle} onClick={() => {}}>
-                Download glb
-              </p>
-            </div>
-          </div>
+          {
+            !successModal ? (
+              <>
+                <p className={styles.headerTitle}>Your loot</p>
+                <div className={styles.bodySection}>
+                  <div className={styles.bodyTitle}>
+                    {Object.keys(avatar).map((trait: any) => {
+                      return (
+                        <p className={styles.traitName} key={trait}>
+                          {trait}: &nbsp;&nbsp;{avatar[trait]}
+                        </p>
+                      );
+                    })}
+                  </div>
+                  <div className={styles.avatarSection}>
+                    <Canvas className={styles.mintCanvas} id="mint-scene" gl={{ antialias: true, preserveDrawingBuffer:true }} linear={false}>
+                      <ambientLight
+                        color={[1,1,1]}
+                        intensity={0.5}
+                      />
+                      
+                      {/* create a cube and add it to the scene */}
+                      {/* <PerspectiveCamera ref={avatarCamera} lookAt={(standRoot as any).current.position}> */}
+                      {/* <PerspectiveCamera ref={avatarCamera}> */}
+                      
+                        {/* <mesh scale={2} > */}
+                          {/* if scene is not null, show it */}
+                          {/* {scene.current && <primitive object={(standRoot as any).current?.clone() ?? null}/>} */}
+                          <Avatar avatar={avatar} stand={stand} fetchTrait={fetchTrait} templateInfo={templateInfo}/>
+                        {/* </mesh> */}
+                      {/* </PerspectiveCamera> */}
+                    </Canvas>
+                  </div>
+                </div>
+                <div className={styles.btnSection}>
+                  { claimDisable ? <div className={styles.disabledClaimBtn}>
+                          <p className={styles.claimTitle}>
+                            Claim
+                          </p>
+                        </div> 
+                        : <div className={styles.claimBtn}>
+                            <p className={styles.claimTitle} onClick={() => {
+                              claimNFT(standRoot.current)
+                            }}>
+                              Claim
+                            </p>
+                          </div>
+                  }
+                  <div className={styles.downloadBtn}>
+                    <p className={styles.downloadTitle} onClick={() => {
+                      download(standRoot.current, "m3LootAvatar", "glb")
+                    }}>
+                      Download glb
+                    </p>
+                  </div>
+                </div>
+              </>) :
+              (
+                <>
+                  <p className={styles.successHeaderTitle}>Congratulations</p>
+                  <p className={styles.successBodyTitle}>You claimed your adventurer gear</p>
+                  <div className={styles.successBodySection}>
+                    <div className={styles.successAvatarSection}>
+                      <Canvas className={styles.successCanvas} id="mint-scene" gl={{ antialias: true, preserveDrawingBuffer:true }} linear={false}>
+                        <ambientLight
+                          color={[1,1,1]}
+                          intensity={0.5}
+                        />
+                        
+                        {/* create a cube and add it to the scene */}
+                        {/* <PerspectiveCamera ref={avatarCamera} lookAt={(standRoot as any).current.position}> */}
+                        {/* <PerspectiveCamera ref={avatarCamera}> */}
+                        
+                          {/* <mesh scale={2} > */}
+                            {/* if scene is not null, show it */}
+                            {/* {scene.current && <primitive object={(standRoot as any).current?.clone() ?? null}/>} */}
+                            <Avatar avatar={avatar} stand={stand} fetchTrait={fetchTrait} templateInfo={templateInfo}/>
+                          {/* </mesh> */}
+                        {/* </PerspectiveCamera> */}
+                      </Canvas>
+                    </div>
+                  </div>
+                  <p className={styles.successBodyTitle}>Join the community</p>
+                  <div className={styles.successBtnSection}>
+                    <div className={styles.discordBtn} onClick={() => {
+                        // connect discord
+                      }}>
+                    </div>
+                    <div className={styles.twitterBtn} onClick={() => {
+                        // connect twitter
+                      }}>
+                    </div>
+                  </div>
+                </>
+              )
+          }
+          
           {/* <div className={styles.connectBtn} >
             <p className={styles.connectTitle} onClick={connectWallet}>Connect wallet</p>
           </div> */}

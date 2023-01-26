@@ -1,13 +1,16 @@
-import React, { useEffect, useState, useContext } from "react";
 import WalletConnectProvider from "@walletconnect/web3-provider";
 import { ethers } from "ethers";
 import dynamic from "next/dynamic";
+import React, { useEffect, useState, useContext } from "react";
 import Web3Modal from "web3modal";
+
+
 
 import { synthLootAddress, synthLootAbi, lootAddress, moreLootAddress, hyperLootAddress, genesisAdventurerAddress, lootAbi } from '../contract';
 import styles from './Content.module.css';
 import World from "./World";
 import { AppContext } from "./index";
+
 
 const INFURA_ID = "460f40a260564ac4a4f4b3fffb032dad";
 
@@ -27,6 +30,8 @@ const Content = () => {
 
   const { state, account, setAccount, library, setLibrary, provider, setProvider} = useContext(AppContext);
 
+  const getLootAbi =(name)=> lootAbi.find((loot)=>loot.name===name);
+
   useEffect(() => {
     if (!account) return;
     const signer = library.getSigner();
@@ -37,7 +42,6 @@ const Content = () => {
       signer
     );
     (async () => {
-
       const [chest, foot, hand, head, neck, ring, waist, weapon] =
       await Promise.all([
         synthContract.getChest(account),
@@ -210,7 +214,6 @@ const Content = () => {
     }
   }
   
-  // console.log(account, "account", active, "active");
   return (
       <>
         { !account && <div className={styles.walletModal}>
