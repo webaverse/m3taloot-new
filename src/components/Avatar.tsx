@@ -3,16 +3,19 @@ import React from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 
+
 const Avatar = ({
   avatar,
   stand,
   fetchTrait,
   templateInfo,
+  setTotalAvatar,
 }: {
   avatar: any;
   stand: any;
   templateInfo: any;
   fetchTrait: (type: any, name: any) => any;
+  setTotalAvatar: any
 }) => {
   const groupAvatarRef = React.useRef() as any;
   React.useEffect(() => {
@@ -31,7 +34,6 @@ const Avatar = ({
           groupAvatarRef?.current?.add(model);
         }
       }
-
       const loader = new GLTFLoader();
       for (const key in avatar) {
         const trait = fetchTrait(key, avatar[key]);
@@ -47,6 +49,7 @@ const Avatar = ({
               }
               gltf.scene.name = "g-" + key;
               groupAvatarRef?.current?.add(gltf.scene);
+              setTotalAvatar(groupAvatarRef.current);
             });
         } else {
           console.log("trait ignored", key);
@@ -56,7 +59,7 @@ const Avatar = ({
   }, [avatar]);
   return (
     <>
-      <group ref={groupAvatarRef} position={[0, -0.12, 0]} />
+      <group ref={groupAvatarRef} position={[0, -0.72, 1]} />
       <pointLight color={0xff7a1a} intensity={0.5} position={[0, 7, 7]} />
       <OrbitControls />
     </>

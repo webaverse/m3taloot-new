@@ -3,7 +3,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import axios from "axios";
 import { BigNumber, ethers } from "ethers";
 import React, { Suspense, useEffect, useRef, useState, useContext } from "react";
-import { AnimationMixer, Color } from "three";
+import { AnimationMixer, Color, Group, MeshStandardMaterial } from "three";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter";
@@ -11,16 +11,16 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 
 
 
+import Avatar from '../components/Avatar';
 import { sceneService } from "../components/scene";
 import templates from "../data/base_models";
 import modelTraits from "../data/model_traits";
 import VRMExporter from "../library/VRMExporter";
-import { combine } from "../library/merge-geometry";
+import { cloneSkeleton, combine } from "../library/merge-geometry";
 import { getAvatarData } from "../library/utils";
 import { getModelFromScene, getScreenShot } from "../library/utils";
 import styles from "./World.module.css";
 import { AppContext } from "./index";
-import Avatar from '../components/Avatar';
 
 
 const pinataApiKey = process.env.VITE_PINATA_API_KEY;
@@ -53,18 +53,14 @@ const genesisAdventurerSlots = [
 export default function World({ avatar, open, lootTokens, mLootTokens, hyperLootTokens, genesisAdventurerTokens }) {
   const scene = useRef();
   const standRoot = useRef();
-  // const avatarCamera = useRef();
-  // const standRootCopy = useRef();
+  const avatarCamera = useRef();
   const [doors, setDoors] = useState<any>();
-  const [stand, setStand] = useState<any>();
+  const [stand, setStand] = useState<any>(); 
+  const [totalAvatar, setTotalAvatar] = useState<any>(); 
   const [avatarModal, setAvatarModal] = useState<any>(false);
   const [successModal, setSuccessModal] = useState<any>(false);
   const [claimDisable, setClaimDisable] = useState<any>(false);
   const { state, account, setAccount, library, setLibrary, provider, setProvider } = useContext(AppContext);
-
-  let camera = new THREE.PerspectiveCamera();
-  let [x, y, z] = [-3, -1, 0];
-  camera.position.set(x, y, z);
 
   const templateInfo = templates[0];
 
@@ -347,53 +343,97 @@ export default function World({ avatar, open, lootTokens, mLootTokens, hyperLoot
     /////////////////////////////////////////////////
   }
 
-  const download = async (avatarToDownload, fileName, format, atlasSize = 4096) => {
+  async function download(avatarToDownload, fileName, format, atlasSize = 4096, isUnoptimized = false) {
     // We can use the SaveAs() from file-saver, but as I reviewed a few solutions for saving files,
     // this approach is more cross browser/version tested then the other solutions and doesn't require a plugin.
-    const link = document.createElement("a")
-    link.style.display = "none"
-    document.body.appendChild(link)
+    const link = document.createElement("a");
+    link.style.display = "none";
+    document.body.appendChild(link);
     function save(blob, filename) {
-      link.href = URL.createObjectURL(blob)
-      link.download = filename
-      link.click()
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      link.click();
     }
 
     function saveString(text, filename) {
-      save(new Blob([text], { type: "text/plain" }), filename)
+      save(new Blob([text], { type: "text/plain" }), filename);
     }
 
     function saveArrayBuffer(buffer, filename) {
-      save(getArrayBuffer(buffer), filename)
+      save(getArrayBuffer(buffer), filename);
     }
     // Specifying the name of the downloadable model
-    const downloadFileName = `${
-      fileName && fileName !== "" ? fileName : "AvatarCreatorModel"
-    }`
+    const downloadFileName = `${fileName && fileName !== "" ? fileName : "AvatarCreatorModel"}`;
 
-    console.log('avatarToDownload', avatarToDownload)
+    console.log("avatarToDownload", avatarToDownload);
 
-    const avatarToCombine = avatarToDownload.clone()
+    const avatarToDownloadClone = avatarToDownload.clone();
+    /*
+      NOTE: After avatar clone, the origIndexBuffer/BufferAttribute in userData will lost many infos:
+      From: BufferAttribute {isBufferAttribute: true, name: '', array: Uint32Array(21438), itemSize: 1, count: 21438, …}
+      To:   Object          {itemSize: 1, type: 'Uint32Array',  array: Array(21438), normalized: false}
+      Especailly notics the change of `array` type, and lost of `count` property, will cause errors later.
+      So have to reassign `userData.origIndexBuffer` after avatar clone.
+    */
+    const origIndexBuffers = [];
+    avatarToDownload.traverse((child) => {
+      if (child.userData.origIndexBuffer) origIndexBuffers.push(child.userData.origIndexBuffer);
+    });
+    avatarToDownloadClone.traverse((child) => {
+      if (child.userData.origIndexBuffer) child.userData.origIndexBuffer = origIndexBuffers.shift();
+    });
 
-    const exporter = format === "glb" ? new GLTFExporter() : new VRMExporter()
-    const avatarModel = await combine({
-      transparentColor: new Color(1, 1, 1),
-      avatar: avatarToCombine,
-      atlasSize,
-    })
+    let avatarModel;
+
+    const exporter = format === "glb" ? new GLTFExporter() : new VRMExporter();
+    if (isUnoptimized) {
+      let skeleton;
+      const skinnedMeshes = [];
+
+      avatarToDownloadClone.traverse((child) => {
+        if (!skeleton && child.isSkinnedMesh) {
+          skeleton = cloneSkeleton(child);
+        }
+        if (child.isSkinnedMesh) {
+          child.geometry = child.geometry.clone();
+          child.skeleton = skeleton;
+          skinnedMeshes.push(child);
+          if (Array.isArray(child.material)) {
+            const materials = child.material;
+            child.material = new MeshStandardMaterial();
+            child.material.map = materials[0].map;
+          }
+          if (child.userData.origIndexBuffer) {
+            child.geometry.setIndex(child.userData.origIndexBuffer);
+          }
+        }
+      });
+
+      avatarModel = new Group();
+      skinnedMeshes.forEach((skinnedMesh) => {
+        avatarModel.add(skinnedMesh);
+      });
+      avatarModel.add(skeleton.bones[0]);
+    } else {
+      avatarModel = await combine({
+        transparentColor: new Color(1, 1, 1),
+        avatar: avatarToDownloadClone,
+        atlasSize,
+      });
+    }
     if (format === "glb") {
       exporter.parse(
         avatarModel,
         (result) => {
           if (result instanceof ArrayBuffer) {
-            saveArrayBuffer(result, `${downloadFileName}.glb`)
+            saveArrayBuffer(result, `${downloadFileName}.glb`);
           } else {
-            const output = JSON.stringify(result, null, 2)
-            saveString(output, `${downloadFileName}.gltf`)
+            const output = JSON.stringify(result, null, 2);
+            saveString(output, `${downloadFileName}.gltf`);
           }
         },
         (error) => {
-          console.error("Error parsing", error)
+          console.error("Error parsing", error);
         },
         {
           trs: false,
@@ -402,16 +442,15 @@ export default function World({ avatar, open, lootTokens, mLootTokens, hyperLoot
           binary: true,
           forcePowerOfTwoTextures: false,
           maxTextureSize: 1024 || Infinity,
-        },
-      )
+        }
+      );
     } else {
-
-      const vrmData = {...getVRMBaseData(avatar), ...getAvatarData(avatarModel, "UpstreetAvatar")}
+      const vrmData = { ...getVRMBaseData(avatar), ...getAvatarData(avatarModel, "UpstreetAvatar") };
       exporter.parse(vrmData, avatarModel, (vrm) => {
-        saveArrayBuffer(vrm, `${downloadFileName}.vrm`)
-      })
+        saveArrayBuffer(vrm, `${downloadFileName}.vrm`);
+      });
     }
-  };
+  }
 
   function getVRMBaseData(avatar) {
     // to do, merge data from all vrms, not to get only the first one
@@ -465,16 +504,11 @@ export default function World({ avatar, open, lootTokens, mLootTokens, hyperLoot
                         intensity={0.5}
                       />
                       
-                      {/* create a cube and add it to the scene */}
-                      {/* <PerspectiveCamera ref={avatarCamera} lookAt={(standRoot as any).current.position}> */}
-                      {/* <PerspectiveCamera ref={avatarCamera}> */}
-                      
-                        {/* <mesh scale={2} > */}
-                          {/* if scene is not null, show it */}
-                          {/* {scene.current && <primitive object={(standRoot as any).current?.clone() ?? null}/>} */}
-                          <Avatar avatar={avatar} stand={stand} fetchTrait={fetchTrait} templateInfo={templateInfo}/>
-                        {/* </mesh> */}
-                      {/* </PerspectiveCamera> */}
+                      <PerspectiveCamera ref={avatarCamera}>
+                        <mesh scale={2} >
+                          <Avatar avatar={avatar} stand={stand} fetchTrait={fetchTrait} templateInfo={templateInfo} setTotalAvatar={setTotalAvatar}/>
+                        </mesh>
+                      </PerspectiveCamera>
                     </Canvas>
                   </div>
                 </div>
@@ -486,7 +520,7 @@ export default function World({ avatar, open, lootTokens, mLootTokens, hyperLoot
                         </div> 
                         : <div className={styles.claimBtn}>
                             <p className={styles.claimTitle} onClick={() => {
-                              claimNFT(standRoot.current)
+                              claimNFT();
                             }}>
                               Claim
                             </p>
@@ -494,7 +528,8 @@ export default function World({ avatar, open, lootTokens, mLootTokens, hyperLoot
                   }
                   <div className={styles.downloadBtn}>
                     <p className={styles.downloadTitle} onClick={() => {
-                      download(standRoot.current, "m3LootAvatar", "glb")
+                      console.log("childatavar", totalAvatar);
+                      download(totalAvatar, "m3LootAvatar", "glb")
                     }}>
                       Download glb
                     </p>
@@ -513,16 +548,11 @@ export default function World({ avatar, open, lootTokens, mLootTokens, hyperLoot
                           intensity={0.5}
                         />
                         
-                        {/* create a cube and add it to the scene */}
-                        {/* <PerspectiveCamera ref={avatarCamera} lookAt={(standRoot as any).current.position}> */}
-                        {/* <PerspectiveCamera ref={avatarCamera}> */}
-                        
-                          {/* <mesh scale={2} > */}
-                            {/* if scene is not null, show it */}
-                            {/* {scene.current && <primitive object={(standRoot as any).current?.clone() ?? null}/>} */}
-                            <Avatar avatar={avatar} stand={stand} fetchTrait={fetchTrait} templateInfo={templateInfo}/>
-                          {/* </mesh> */}
-                        {/* </PerspectiveCamera> */}
+                        <PerspectiveCamera ref={avatarCamera}>                        
+                          <mesh scale={2} >
+                            <Avatar avatar={avatar} stand={stand} fetchTrait={fetchTrait} templateInfo={templateInfo} setTotalAvatar={() => {}}/>
+                          </mesh>
+                        </PerspectiveCamera>
                       </Canvas>
                     </div>
                   </div>
@@ -540,10 +570,6 @@ export default function World({ avatar, open, lootTokens, mLootTokens, hyperLoot
                 </>
               )
           }
-          
-          {/* <div className={styles.connectBtn} >
-            <p className={styles.connectTitle} onClick={connectWallet}>Connect wallet</p>
-          </div> */}
         </div>
       )}
     </Suspense>
