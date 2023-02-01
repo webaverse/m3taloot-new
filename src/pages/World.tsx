@@ -11,8 +11,9 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 
 
 
-import Avatar from '../components/Avatar';
+import Avatar from "../components/Avatar";
 import { sceneService } from "../components/scene";
+import { m3LootAvatarAddress, m3LootAbi } from "../contract";
 import templates from "../data/base_models";
 import modelTraits from "../data/model_traits";
 import VRMExporter from "../library/VRMExporter";
@@ -23,8 +24,10 @@ import styles from "./World.module.css";
 import { AppContext } from "./index";
 
 
-const pinataApiKey = process.env.VITE_PINATA_API_KEY;
-const pinataSecretApiKey = process.env.VITE_PINATA_API_SECRET;
+// const pinataApiKey = process.env.PINATA_API_KEY;
+// const pinataSecretApiKey = process.env.PINATA_API_SECRET;
+const pinataApiKey = "bf7ebd9ad32c11abe43c";
+const pinataSecretApiKey = "c6fa7b8b056d0cf2e467e0ebbdc38ae889b96c59f06992ae831e2a25e52e5006";
 
 function CameraMod(scene) {
   const cameraDolly = scene.scene.cameras[0];
@@ -265,81 +268,81 @@ export default function World({ avatar, open, lootTokens, mLootTokens, hyperLoot
   };
 
   const claimNFT = async () => {
-    setSuccessModal(true);
     setClaimDisable(true);
-    // const screenshot = await getScreenShot("mint-scene")
-    // if (!screenshot) {
-    //   throw new Error("Unable to get screenshot")
-    // }
+    const screenshot = await getScreenShot("mint-scene")
+    if (!screenshot) {
+      throw new Error("Unable to get screenshot")
+    }
 
-    // const imageHash = await saveFileToPinata(
-    //   screenshot,
-    //   "AvatarImage_" + Date.now() + ".png",
-    // ).catch((reason) => {
-    //   console.error(reason)
-    //   // setMintStatus("Couldn't save to pinata")
-    // })
-    // const glb = await getModelFromScene(avatar.scene.clone(), "glb", new Color(1, 1, 1))
+    const imageHash = await saveFileToPinata(
+      screenshot,
+      "AvatarImage_" + Date.now() + ".png",
+    ).catch((err) => {
+      console.error(err)
+    })
+    console.log("imagehash",imageHash)
+    // const glb = await getModelFromScene(totalAvatar.clone(), "glb", new Color(1, 1, 1))
     // const glbHash = await saveFileToPinata(
     //   glb,
     //   "AvatarGlb_" + Date.now() + ".glb",
     // )
 
-    // let attributes = [];
-    // Object.keys(avatar).map((trait: any) => {
-    //   attributes.push({
-    //     trait_type: trait,
-    //     value: avatar[trait]
-    //   })
-    // })
-    // console.log("attributes", attributes)
-    // const metadata = {
-    //   name: "Avatars",
-    //   description: "Creator Studio Avatars.",
-    //   image: `ipfs://${imageHash.IpfsHash}`,
-    //   animation_url: `ipfs://${glbHash.IpfsHash}`,
-    //   attributes,
-    // }
-    // const str = JSON.stringify(metadata)
-    // const metaDataHash = await saveFileToPinata(
-    //   new Blob([str]),
-    //   "AvatarMetadata_" + Date.now() + ".json",
-    // )
-    // const metadataIpfs = metaDataHash.IpfsHash
+    let attributes = [];
+    Object.keys(avatar).map((trait: any) => {
+      attributes.push({
+        trait_type: trait,
+        value: avatar[trait]
+      })
+    })
+    console.log("attributes", attributes)
+    const metadata = {
+      name: "Avatars",
+      description: "Creator Studio Avatars.",
+      image: `ipfs://${imageHash.IpfsHash}`,
+      // animation_url: `ipfs://${glbHash.IpfsHash}`,  // comment
+      animation_url: `ipfs://`,  
+      attributes,
+    }
+    console.log("metadata", metadata);
 
-    // ////////////////////// mint /////////////////////
-    // const chainId = 5 // 1: ethereum mainnet, 4: rinkeby 137: polygon mainnet 5: // Goerli testnet
-    // if (window.ethereum.networkVersion !== chainId) {
-    //   try {
-    //     await window.ethereum.request({
-    //       method: "wallet_switchEthereumChain",
-    //       params: [{ chainId: "0x5" }], // 0x4 is rinkeby. Ox1 is ethereum mainnet. 0x89 polygon mainnet  0x5: // Goerli testnet
-    //     })
-    //   } catch (err) {
-    //     // notifymessage("Please check the Ethereum mainnet", "error");
-    //     // setMintStatus("Please check the Polygon mainnet")
-    //     return false
-    //   }
-    // }
-    // const signer = new ethers.providers.Web3Provider(
-    //   window.ethereum,
-    // ).getSigner()
-    // const contract = new ethers.Contract(CharacterContract.address, CharacterContract.abi, signer)
+    const str = JSON.stringify(metadata)
+    const metaDataHash = await saveFileToPinata(
+      new Blob([str]),
+      "AvatarMetadata_" + Date.now() + ".json",
+    )
+    const metadataIpfs = metaDataHash.IpfsHash
+
+    ////////////////////// mint /////////////////////
+    const chainId = 137 // 1: ethereum mainnet, 4: rinkeby 137: polygon mainnet 5: Goerli testnet
+    if (window.ethereum.networkVersion !== chainId) {
+      try {
+        await window.ethereum.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: "0x89" }], // 0x4 is rinkeby. Ox1 is ethereum mainnet. 0x89 polygon mainnet  0x5: // Goerli testnet
+        })
+      } catch (err) {
+        return false
+      }
+    }
+    const signer = new ethers.providers.Web3Provider(
+      window.ethereum,
+    ).getSigner()
+    const contract = new ethers.Contract(m3LootAvatarAddress, m3LootAbi, signer)
     // const tokenPrice = await contract.tokenPrice()
-    // try {
-    //   const options = {
-    //     value: BigNumber.from(tokenPrice).mul(1),
-    //     from: account,
-    //   }
-    //   const tx = await contract.mintToken(1, metadataIpfs, options)
-    //   let res = await tx.wait()
-    //   if (res.transactionHash) {
-    //     // setMintStatus("Mint success!")
-    //     // setCurrentView(ViewStates.MINT_COMPLETE)
-    //   }
-    // } catch (err) {
-    //   // setMintStatus("Public Mint failed! Please check your wallet.")
-    // }
+    const tokenPrice = 0.001 * 10 ** 18;
+    try {
+      const options = {
+        value: BigNumber.from(tokenPrice).mul(1),
+        from: account,
+      }
+      const tx = await contract.safeMint(1, metadataIpfs, options)
+      let res = await tx.wait()
+      if (res.transactionHash) {
+        setSuccessModal(true);
+      }
+    } catch (err) {
+      // setMintStatus("Public Mint failed! Please check your wallet.")
+    }
     /////////////////////////////////////////////////
   }
 

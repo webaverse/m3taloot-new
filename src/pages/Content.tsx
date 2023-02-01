@@ -79,7 +79,6 @@ const Content = () => {
 
       const genesisAdventurerContract = new ethers.Contract(genesisAdventurerAddress, lootAbi, signer);
 
-
       const testAccount = '0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00';
 
       const lootAccount = account; // testAccount;
